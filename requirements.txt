@@ -1,0 +1,6 @@
+gdown
+google-cloud-storage
+python-dotenv
+google-cloud-firestore
+google-auth
+
