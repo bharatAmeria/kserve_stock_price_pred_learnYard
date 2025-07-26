@@ -1,0 +1,28 @@
+1. Create repo, clone it in local
+
+2. Create a virtual environment -> python3 -m venv venv
+
+3. Activate the virtual environment -> source venv/bin/Activate
+
+4. Create template.py file and copy code and run it ( it create a project structure for you )
+
+5. Add code to setup.py, project.toml, testEnvironment.py, requirements.txt, src/constants/__init__.py.
+    Now run testEnvironment.py (verifies the pyhton environment and install dependecies from requirements.txt)
+
+------------------ Azure ---------------------
+1. First sign Up by creating an account.
+2. follow the below command step by step
+    az login   
+    az account set --subscription "your-subscription-name"  (optional if multiple)
+    az group create --name myResourceGroup --location eastus
+
+  
+
+
+
+
+
+Delete the storage account
+
+# This deletes the resource group and ALL resources within it
+az group delete --name myResourceGroup

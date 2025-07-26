@@ -5,6 +5,7 @@ import pandas as pd
 from src.config import CONFIG
 from src.logger import logging
 from src.exception import MyException
+from sklearn.preprocessing import StandardScaler
 from sklearn.model_selection import train_test_split
 
 class DataPreprocess:
@@ -32,7 +33,7 @@ class DataPreprocess:
             df['Date'] = pd.to_datetime(df['Date'])
             df['year'] = df['Date'].dt.year
             df['month'] = df['Date'].dt.month
-            df['day'] = df['Date'].df
+            df['day'] = df['Date'].dt.day
 
             df.drop('Date',axis=1,inplace=True)
             save_path = CONFIG["processed_data_path"]
@@ -72,7 +73,7 @@ class DataPreprocess:
             X_train = sclr.fit_transform(train_set)
             X_test = sclr.transform(test_set)
 
-            dir_path = os.path.dirname(self.config["FILE_NAME"])
+            dir_path = os.path.dirname(self.config["feature_store"])
             os.makedirs(dir_path,exist_ok=True)
             
             logging.info(f"Exporting train and test file path.")

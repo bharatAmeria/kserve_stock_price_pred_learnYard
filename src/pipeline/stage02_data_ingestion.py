@@ -1,7 +1,7 @@
 import sys
 from src.logger import logging
 from src.exception import MyException
-from src.components.dataIngestion import IngestData
+from src.components.data_ingestion import IngestData
 from src.constants import *
 
 class DataIngestionPipeline:

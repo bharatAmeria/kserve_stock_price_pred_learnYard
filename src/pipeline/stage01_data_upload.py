@@ -14,10 +14,7 @@ class DataUploadPipeline:
         upload = UploadData()
         upload.download_file()
         upload.extract_zip_file()
-
-        # Call the function
-        inserted = upload.upload_to_gcs()
-        print(f"{len(inserted)} documents inserted.")
+        upload.upload_to_s3()
 
 
 

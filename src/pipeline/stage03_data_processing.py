@@ -18,7 +18,7 @@ class DataProcessingPipeline:
 
         logging.info(">>>>>Data Preprocessing Started...<<<<<")
         data_cleaning = DataPreprocess()
-        data_cleaning.handle_data(data=data)
+        data_cleaning.handle_data(data)
         data_cleaning.split_data_as_train_test()
         logging.info(">>>>>Data Preprocessing Completed<<<<<\n")
 
