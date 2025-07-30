@@ -66,5 +66,5 @@ testEnvironment.py
 template.py
 setup.py
 
-
+manifests/
 projectflow.txt 

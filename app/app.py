@@ -1,16 +1,17 @@
 import numpy as np
-import pickle
+
 from fastapi import FastAPI, Form, Request
 from fastapi.responses import HTMLResponse
 from fastapi.templating import Jinja2Templates
 from sklearn.preprocessing import StandardScaler
 from pydantic import BaseModel
+from joblib import load
+
+model = load("model.pkl")
+
 
 # Initialize FastAPI app
 app = FastAPI()
-
-# Load model
-model = pickle.load(open("model.pkl", "rb"))
 
 # Preprocessor
 sclr = StandardScaler()

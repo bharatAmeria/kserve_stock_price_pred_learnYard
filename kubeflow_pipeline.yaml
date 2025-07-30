@@ -1,0 +1,201 @@
+# PIPELINE DEFINITION
+# Name: end-to-end-ml-pipeline
+# Description: Pipeline for data upload, ingestion, preprocessing, and training
+components:
+  comp-ingest-data:
+    executorLabel: exec-ingest-data
+  comp-preprocess-data:
+    executorLabel: exec-preprocess-data
+  comp-train-model:
+    executorLabel: exec-train-model
+  comp-upload-data:
+    executorLabel: exec-upload-data
+    outputDefinitions:
+      parameters:
+        Output:
+          parameterType: NUMBER_INTEGER
+deploymentSpec:
+  executors:
+    exec-ingest-data:
+      container:
+        args:
+        - --executor_input
+        - '{{$}}'
+        - --function_to_execute
+        - ingest_data
+        command:
+        - sh
+        - -c
+        - "\nif ! [ -x \"$(command -v pip)\" ]; then\n    python3 -m ensurepip ||\
+          \ python3 -m ensurepip --user || apt-get install python3-pip\nfi\n\nPIP_DISABLE_PIP_VERSION_CHECK=1\
+          \ python3 -m pip install --quiet --no-warn-script-location 'kfp==2.13.0'\
+          \ '--no-deps' 'typing-extensions>=3.7.4,<5; python_version<\"3.9\"' && \"\
+          $0\" \"$@\"\n"
+        - sh
+        - -ec
+        - 'program_path=$(mktemp -d)
+
+
+          printf "%s" "$0" > "$program_path/ephemeral_component.py"
+
+          _KFP_RUNTIME=true python3 -m kfp.dsl.executor_main                         --component_module_path                         "$program_path/ephemeral_component.py"                         "$@"
+
+          '
+        - "\nimport kfp\nfrom kfp import dsl\nfrom kfp.dsl import *\nfrom typing import\
+          \ *\n\ndef ingest_data():\n    from src.components.data_ingestion import\
+          \ IngestData\n    from src.logger import logging\n\n    try:\n        logging.info(\"\
+          Ingestion Stage started.\")\n        ingestor = IngestData()\n        ingestor.initiate_data_ingestion()\n\
+          \        logging.info(\"Ingestion Stage completed.\")\n    except Exception\
+          \ as e:\n        logging.error(f\"Ingestion Stage failed: {e}\")\n     \
+          \   raise e\n\n"
+        image: myacr123.azurecr.io/ml-pipeline:latest
+    exec-preprocess-data:
+      container:
+        args:
+        - --executor_input
+        - '{{$}}'
+        - --function_to_execute
+        - preprocess_data
+        command:
+        - sh
+        - -c
+        - "\nif ! [ -x \"$(command -v pip)\" ]; then\n    python3 -m ensurepip ||\
+          \ python3 -m ensurepip --user || apt-get install python3-pip\nfi\n\nPIP_DISABLE_PIP_VERSION_CHECK=1\
+          \ python3 -m pip install --quiet --no-warn-script-location 'kfp==2.13.0'\
+          \ '--no-deps' 'typing-extensions>=3.7.4,<5; python_version<\"3.9\"' && \"\
+          $0\" \"$@\"\n"
+        - sh
+        - -ec
+        - 'program_path=$(mktemp -d)
+
+
+          printf "%s" "$0" > "$program_path/ephemeral_component.py"
+
+          _KFP_RUNTIME=true python3 -m kfp.dsl.executor_main                         --component_module_path                         "$program_path/ephemeral_component.py"                         "$@"
+
+          '
+        - "\nimport kfp\nfrom kfp import dsl\nfrom kfp.dsl import *\nfrom typing import\
+          \ *\n\ndef preprocess_data():\n    import pandas as pd\n    from src.config\
+          \ import CONFIG\n    from src.components.data_processing import DataPreprocess\n\
+          \    from src.logger import logging\n\n    try:\n        config = CONFIG[\"\
+          data_ingest\"]\n        data = pd.read_csv(config[\"feature_store\"])\n\n\
+          \        logging.info(\"Preprocessing Stage started.\")\n        cleaner\
+          \ = DataPreprocess()\n        cleaner.handle_data(data=data)\n        cleaner.split_data_as_train_test()\n\
+          \        logging.info(\"Preprocessing Stage completed.\")\n    except Exception\
+          \ as e:\n        logging.error(f\"Preprocessing Stage failed: {e}\")\n \
+          \       raise e\n\n"
+        image: myacr123.azurecr.io/ml-pipeline:latest
+    exec-train-model:
+      container:
+        args:
+        - --executor_input
+        - '{{$}}'
+        - --function_to_execute
+        - train_model
+        command:
+        - sh
+        - -c
+        - "\nif ! [ -x \"$(command -v pip)\" ]; then\n    python3 -m ensurepip ||\
+          \ python3 -m ensurepip --user || apt-get install python3-pip\nfi\n\nPIP_DISABLE_PIP_VERSION_CHECK=1\
+          \ python3 -m pip install --quiet --no-warn-script-location 'kfp==2.13.0'\
+          \ '--no-deps' 'typing-extensions>=3.7.4,<5; python_version<\"3.9\"' && \"\
+          $0\" \"$@\"\n"
+        - sh
+        - -ec
+        - 'program_path=$(mktemp -d)
+
+
+          printf "%s" "$0" > "$program_path/ephemeral_component.py"
+
+          _KFP_RUNTIME=true python3 -m kfp.dsl.executor_main                         --component_module_path                         "$program_path/ephemeral_component.py"                         "$@"
+
+          '
+        - "\nimport kfp\nfrom kfp import dsl\nfrom kfp.dsl import *\nfrom typing import\
+          \ *\n\ndef train_model():\n    import pandas as pd\n    from src.config\
+          \ import CONFIG\n    from src.components.model import ModelTraining\n  \
+          \  from src.logger import logging\n\n    try:\n        config = CONFIG[\"\
+          model_training\"]\n        X_train = pd.read_csv(config[\"TRAIN_FILE_NAME\"\
+          ])\n        X_test = pd.read_csv(config[\"TEST_FILE_NAME\"])\n        y_train\
+          \ = pd.read_csv(config[\"TRAIN_LABEL_FILE_NAME\"])\n        y_test = pd.read_csv(config[\"\
+          TEST_LABEL_FILE_NAME\"])\n\n        logging.info(\"Model Training Stage\
+          \ started.\")\n        trainer = ModelTraining()\n        trainer.handle_training(X_train,\
+          \ X_test, y_train, y_test)\n        logging.info(\"Model Training Stage\
+          \ completed.\")\n    except Exception as e:\n        logging.error(f\"Model\
+          \ Training failed: {e}\")\n        raise e\n\n"
+        image: myacr123.azurecr.io/ml-pipeline:latest
+    exec-upload-data:
+      container:
+        args:
+        - --executor_input
+        - '{{$}}'
+        - --function_to_execute
+        - upload_data
+        command:
+        - sh
+        - -c
+        - "\nif ! [ -x \"$(command -v pip)\" ]; then\n    python3 -m ensurepip ||\
+          \ python3 -m ensurepip --user || apt-get install python3-pip\nfi\n\nPIP_DISABLE_PIP_VERSION_CHECK=1\
+          \ python3 -m pip install --quiet --no-warn-script-location 'kfp==2.13.0'\
+          \ '--no-deps' 'typing-extensions>=3.7.4,<5; python_version<\"3.9\"' && \"\
+          $0\" \"$@\"\n"
+        - sh
+        - -ec
+        - 'program_path=$(mktemp -d)
+
+
+          printf "%s" "$0" > "$program_path/ephemeral_component.py"
+
+          _KFP_RUNTIME=true python3 -m kfp.dsl.executor_main                         --component_module_path                         "$program_path/ephemeral_component.py"                         "$@"
+
+          '
+        - "\nimport kfp\nfrom kfp import dsl\nfrom kfp.dsl import *\nfrom typing import\
+          \ *\n\ndef upload_data() -> int:\n    from src.components.data_upload import\
+          \ UploadData\n    from src.logger import logging\n\n    try:\n        upload\
+          \ = UploadData()\n        upload.download_file()\n        upload.extract_zip_file()\n\
+          \        inserted = upload.upload_to_s3()\n        logging.info(f\"{len(inserted)}\
+          \ documents inserted.\")\n        return len(inserted)\n    except Exception\
+          \ as e:\n        logging.error(f\"Upload Stage failed: {e}\")\n        raise\
+          \ e\n\n"
+        image: myacr123.azurecr.io/ml-pipeline:latest
+pipelineInfo:
+  description: Pipeline for data upload, ingestion, preprocessing, and training
+  name: end-to-end-ml-pipeline
+root:
+  dag:
+    tasks:
+      ingest-data:
+        cachingOptions:
+          enableCache: true
+        componentRef:
+          name: comp-ingest-data
+        dependentTasks:
+        - upload-data
+        taskInfo:
+          name: ingest-data
+      preprocess-data:
+        cachingOptions:
+          enableCache: true
+        componentRef:
+          name: comp-preprocess-data
+        dependentTasks:
+        - ingest-data
+        taskInfo:
+          name: preprocess-data
+      train-model:
+        cachingOptions:
+          enableCache: true
+        componentRef:
+          name: comp-train-model
+        dependentTasks:
+        - preprocess-data
+        taskInfo:
+          name: train-model
+      upload-data:
+        cachingOptions:
+          enableCache: true
+        componentRef:
+          name: comp-upload-data
+        taskInfo:
+          name: upload-data
+schemaVersion: 2.1.0
+sdkVersion: kfp-2.13.0

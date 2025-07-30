@@ -2,8 +2,7 @@ import kfp
 from kfp import dsl
 from kfp.dsl import component
 
-# Change this to your actual ACR image path
-BASE_IMAGE = "myacr123.azurecr.io/ml-pipeline:latest"
+BASE_IMAGE = "<aws_account_id>.dkr.ecr.<region>.amazonaws.com/<repository_name>:<tag>"
 
 # ===== Upload Component =====
 @component(base_image=BASE_IMAGE)
@@ -15,7 +14,7 @@ def upload_data() -> int:
         upload = UploadData()
         upload.download_file()
         upload.extract_zip_file()
-        inserted = upload.upload_to_azure_blob()
+        inserted = upload.upload_to_s3()
         logging.info(f"{len(inserted)} documents inserted.")
         return len(inserted)
     except Exception as e:

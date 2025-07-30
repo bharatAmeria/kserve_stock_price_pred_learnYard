@@ -8,4 +8,5 @@ pandas
 numpy
 python-box==7.3.2
 PyYAML==6.0.2
--e .
+kfp==2.13.0
+protobuf>=4.21.1,<5
