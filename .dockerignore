@@ -56,15 +56,12 @@ Dockerfile
 docker-compose.yaml
 
 # Kubeflow compiled pipeline YAMLs
-*.yaml
 !kubeflow_pipeline.yaml
 *.md
 .DS_Store
-*.toml
 train.py
 testEnvironment.py
-template.py
-setup.py
 
 manifests/
 projectflow.txt 
+app/

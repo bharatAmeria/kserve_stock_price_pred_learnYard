@@ -77,45 +77,65 @@
 12. Now we need to install Kubeflow
 
 12.1 # Clone the full Kubeflow manifests
-        git clone https://github.com/kubeflow/manifests.git
-        cd manifests
 
-        # Checkout a stable release (e.g., v1.8.0 or latest)
-        git checkout v1.8-branch
+      export PIPELINE_VERSION=2.4.0
+      kubectl apply -k "github.com/kubeflow/pipelines/manifests/kustomize/cluster-scoped-resources?ref=$PIPELINE_VERSION"
+      kubectl wait --for condition=established --timeout=60s crd/applications.app.k8s.io
+      kubectl apply -k "github.com/kubeflow/pipelines/manifests/kustomize/env/dev?ref=$PIPELINE_VERSION"
 
-        # Install all components using Kustomize and kubectl
-        while ! kustomize build example | kubectl apply -f -; do echo "Retrying to apply resources"; sleep 10; done
+    If you encounter persistent pod crashes
 
-        eksctl create addon \
-        --name aws-ebs-csi-driver \
-        --cluster kubeflow-cluster \   
-        --region us-east-1 \    
-        --service-account-role-arn arn:aws:iam::684931265998:role/AmazonEKS_EBS_CSI_DriverRole \
-        --force
+      kubectl apply -k "github.com/kubeflow/pipelines/manifests/kustomize/env/platform-agnostic?ref=$PIPELINE_VERSION"
 
+      kubectl get pods -n kubeflow
 
-        cat <<EOF | kubectl apply -f -
-        apiVersion: storage.k8s.io/v1
-        kind: StorageClass
-        metadata:
-        name: gp2-csi
-        annotations:
-            storageclass.kubernetes.io/is-default-class: "true"
-        provisioner: ebs.csi.aws.com
-        parameters:
-        type: gp2
-        fsType: ext4
-        reclaimPolicy: Delete
-        volumeBindingMode: WaitForFirstConsumer
-        EOF
+      kubectl port-forward -n kubeflow svc/ml-pipeline-ui 8080:80
+
+      minikube image load kfp-local:latest
 
 
-12.2 Then run -> kubectl get pods -n kubeflow
-12.3 To access kubeflow ui -> kubectl port-forward svc/ml-pipeline-ui -n kubeflow 8080:80
+13. Install kserve:
 
-13. once you get ip the access it using -> http://<external-ip-or-dns>:8080
-14. run kubeflow/ml_pipe.py file which upload our pipeline
+    Install KServe
+    # Install KServe 0.11.2 (recommended stable version)
+    kubectl apply -f https://github.com/kserve/kserve/releases/download/v0.11.2/kserve.yaml
 
+    # Wait until all KServe pods are ready
+    kubectl get pods -n kserve
+
+      fisrtly install ISTIO :- 
+
+      curl -L https://istio.io/downloadIstio | ISTIO_VERSION=1.20.3 sh -
+      cd istio-1.20.3
+      export PATH=$PWD/bin:$PATH
+
+      # Knative Serving CRDs
+      kubectl apply -f https://github.com/knative/serving/releases/download/knative-v1.10.1/serving-crds.yaml
+
+      # Knative Serving Core
+      kubectl apply -f https://github.com/knative/serving/releases/download/knative-v1.10.1/serving-core.yaml
+
+      # Knative Istio integration (both controller + config)
+      kubectl apply -f https://github.com/knative/net-istio/releases/download/knative-v1.10.1/net-istio.yaml
+
+14. Install Cert-Manager (dependency for KServe)
+      kubectl apply -f https://github.com/jetstack/cert-manager/releases/download/v1.13.2/cert-manager.yaml
+
+      # Wait until all cert-manager pods are ready
+      kubectl get pods -n cert-manager
+
+
+      Wait until all pods are running in the knative-serving namespace:
+
+      kubectl get pods -n knative-serving
+      kubectl get svc -n istio-system
+
+      kubectl apply -f inference-service.yaml
+
+      kubectl get svc istio-ingressgateway -n istio-system
+
+Look for the EXTERNAL-IP. Example: a1b2c3d4e5.us-east-1.elb.amazonaws.com
+      http://a1b2c3d4.elb.amazonaws.com
 ----------- Fast API ---------------
 
 1. Dockerize FastAPI App
@@ -128,32 +148,7 @@
     docker buildx build --platform linux/amd64 -t 12345678910.dkr.ecr.us-east-1.amazonaws.com/lambda:latest .
     docker push 12345678910.dkr.ecr.us-east-1.amazonaws.com/lambda:latest
 
-3. Install Istio (required by KServe)
-    # Download Istio
-    curl -L https://istio.io/downloadIstio | ISTIO_VERSION=1.19.3 sh -
-    cd istio-1.19.3
-
-    # Add istioctl to path
-    export PATH=$PWD/bin:$PATH
-
-    # Install Istio with default profile
-    istioctl install --set profile=demo -y
-
-    # Label namespace for Istio injection
-    kubectl label namespace default istio-injection=enabled
-
-4. Install Cert-Manager (dependency for KServe)
-    kubectl apply -f https://github.com/jetstack/cert-manager/releases/download/v1.13.2/cert-manager.yaml
-
-    # Wait until all cert-manager pods are ready
-    kubectl get pods -n cert-manager
-
-5. Install KServe
-    # Install KServe 0.11.2 (recommended stable version)
-    kubectl apply -f https://github.com/kserve/kserve/releases/download/v0.11.2/kserve.yaml
-
-    # Wait until all KServe pods are ready
-    kubectl get pods -n kserve
+5. 
 
 6. Verify:
     kubectl get deployment -n kserve

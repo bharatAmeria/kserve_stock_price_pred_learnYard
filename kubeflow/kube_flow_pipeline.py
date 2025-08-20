@@ -1,36 +1,36 @@
 import kfp
 from kfp import dsl
+from src.logger import logging
 from kfp.dsl import component
+from src.pipeline.stage01_data_upload import DataUploadPipeline
+from src.pipeline.stage02_data_ingestion import DataIngestionPipeline
+from src.pipeline.stage03_data_processing import DataProcessingPipeline
+from src.pipeline.stage04_model_training import ModelPipeline
 
-BASE_IMAGE = "<aws_account_id>.dkr.ecr.<region>.amazonaws.com/<repository_name>:<tag>"
+
+BASE_IMAGE = "kfp-local:latest"
+
 
 # ===== Upload Component =====
 @component(base_image=BASE_IMAGE)
 def upload_data() -> int:
-    from src.components.data_upload import UploadData
-    from src.logger import logging
 
     try:
-        upload = UploadData()
-        upload.download_file()
-        upload.extract_zip_file()
-        inserted = upload.upload_to_s3()
-        logging.info(f"{len(inserted)} documents inserted.")
-        return len(inserted)
+        data_ingestion = DataUploadPipeline()
+        data_ingestion.main()
+        logging.info(f"✅ Uploaded {len(data_ingestion)} files to S3.")
+        return len(data_ingestion)
     except Exception as e:
-        logging.error(f"Upload Stage failed: {e}")
+        logging.error(f"❌ Upload Stage failed: {e}")
         raise e
 
 # ===== Ingestion Component =====
 @component(base_image=BASE_IMAGE)
 def ingest_data():
-    from src.components.data_ingestion import IngestData
-    from src.logger import logging
-
     try:
         logging.info("Ingestion Stage started.")
-        ingestor = IngestData()
-        ingestor.initiate_data_ingestion()
+        data_processing= DataIngestionPipeline()
+        data_processing.main()
         logging.info("Ingestion Stage completed.")
     except Exception as e:
         logging.error(f"Ingestion Stage failed: {e}")
@@ -39,19 +39,11 @@ def ingest_data():
 # ===== Preprocessing Component =====
 @component(base_image=BASE_IMAGE)
 def preprocess_data():
-    import pandas as pd
-    from src.config import CONFIG
-    from src.components.data_processing import DataPreprocess
-    from src.logger import logging
 
     try:
-        config = CONFIG["data_ingest"]
-        data = pd.read_csv(config["feature_store"])
-
         logging.info("Preprocessing Stage started.")
-        cleaner = DataPreprocess()
-        cleaner.handle_data(data=data)
-        cleaner.split_data_as_train_test()
+        data_processing= DataProcessingPipeline()
+        data_processing.main()
         logging.info("Preprocessing Stage completed.")
     except Exception as e:
         logging.error(f"Preprocessing Stage failed: {e}")
@@ -66,15 +58,9 @@ def train_model():
     from src.logger import logging
 
     try:
-        config = CONFIG["model_training"]
-        X_train = pd.read_csv(config["TRAIN_FILE_NAME"])
-        X_test = pd.read_csv(config["TEST_FILE_NAME"])
-        y_train = pd.read_csv(config["TRAIN_LABEL_FILE_NAME"])
-        y_test = pd.read_csv(config["TEST_LABEL_FILE_NAME"])
-
         logging.info("Model Training Stage started.")
-        trainer = ModelTraining()
-        trainer.handle_training(X_train, X_test, y_train, y_test)
+        selection = ModelPipeline()
+        selection.main()
         logging.info("Model Training Stage completed.")
     except Exception as e:
         logging.error(f"Model Training failed: {e}")

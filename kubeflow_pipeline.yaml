@@ -42,13 +42,12 @@ deploymentSpec:
 
           '
         - "\nimport kfp\nfrom kfp import dsl\nfrom kfp.dsl import *\nfrom typing import\
-          \ *\n\ndef ingest_data():\n    from src.components.data_ingestion import\
-          \ IngestData\n    from src.logger import logging\n\n    try:\n        logging.info(\"\
-          Ingestion Stage started.\")\n        ingestor = IngestData()\n        ingestor.initiate_data_ingestion()\n\
-          \        logging.info(\"Ingestion Stage completed.\")\n    except Exception\
-          \ as e:\n        logging.error(f\"Ingestion Stage failed: {e}\")\n     \
-          \   raise e\n\n"
-        image: myacr123.azurecr.io/ml-pipeline:latest
+          \ *\n\ndef ingest_data():\n    try:\n        logging.info(\"Ingestion Stage\
+          \ started.\")\n        data_processing= DataIngestionPipeline()\n      \
+          \  data_processing.main()\n        logging.info(\"Ingestion Stage completed.\"\
+          )\n    except Exception as e:\n        logging.error(f\"Ingestion Stage\
+          \ failed: {e}\")\n        raise e\n\n"
+        image: kfp-local:latest
     exec-preprocess-data:
       container:
         args:
@@ -75,16 +74,12 @@ deploymentSpec:
 
           '
         - "\nimport kfp\nfrom kfp import dsl\nfrom kfp.dsl import *\nfrom typing import\
-          \ *\n\ndef preprocess_data():\n    import pandas as pd\n    from src.config\
-          \ import CONFIG\n    from src.components.data_processing import DataPreprocess\n\
-          \    from src.logger import logging\n\n    try:\n        config = CONFIG[\"\
-          data_ingest\"]\n        data = pd.read_csv(config[\"feature_store\"])\n\n\
-          \        logging.info(\"Preprocessing Stage started.\")\n        cleaner\
-          \ = DataPreprocess()\n        cleaner.handle_data(data=data)\n        cleaner.split_data_as_train_test()\n\
-          \        logging.info(\"Preprocessing Stage completed.\")\n    except Exception\
-          \ as e:\n        logging.error(f\"Preprocessing Stage failed: {e}\")\n \
-          \       raise e\n\n"
-        image: myacr123.azurecr.io/ml-pipeline:latest
+          \ *\n\ndef preprocess_data():\n\n    try:\n        logging.info(\"Preprocessing\
+          \ Stage started.\")\n        data_processing= DataProcessingPipeline()\n\
+          \        data_processing.main()\n        logging.info(\"Preprocessing Stage\
+          \ completed.\")\n    except Exception as e:\n        logging.error(f\"Preprocessing\
+          \ Stage failed: {e}\")\n        raise e\n\n"
+        image: kfp-local:latest
     exec-train-model:
       container:
         args:
@@ -113,16 +108,12 @@ deploymentSpec:
         - "\nimport kfp\nfrom kfp import dsl\nfrom kfp.dsl import *\nfrom typing import\
           \ *\n\ndef train_model():\n    import pandas as pd\n    from src.config\
           \ import CONFIG\n    from src.components.model import ModelTraining\n  \
-          \  from src.logger import logging\n\n    try:\n        config = CONFIG[\"\
-          model_training\"]\n        X_train = pd.read_csv(config[\"TRAIN_FILE_NAME\"\
-          ])\n        X_test = pd.read_csv(config[\"TEST_FILE_NAME\"])\n        y_train\
-          \ = pd.read_csv(config[\"TRAIN_LABEL_FILE_NAME\"])\n        y_test = pd.read_csv(config[\"\
-          TEST_LABEL_FILE_NAME\"])\n\n        logging.info(\"Model Training Stage\
-          \ started.\")\n        trainer = ModelTraining()\n        trainer.handle_training(X_train,\
-          \ X_test, y_train, y_test)\n        logging.info(\"Model Training Stage\
-          \ completed.\")\n    except Exception as e:\n        logging.error(f\"Model\
-          \ Training failed: {e}\")\n        raise e\n\n"
-        image: myacr123.azurecr.io/ml-pipeline:latest
+          \  from src.logger import logging\n\n    try:\n        logging.info(\"Model\
+          \ Training Stage started.\")\n        selection = ModelPipeline()\n    \
+          \    selection.main()\n        logging.info(\"Model Training Stage completed.\"\
+          )\n    except Exception as e:\n        logging.error(f\"Model Training failed:\
+          \ {e}\")\n        raise e\n\n"
+        image: kfp-local:latest
     exec-upload-data:
       container:
         args:
@@ -149,14 +140,12 @@ deploymentSpec:
 
           '
         - "\nimport kfp\nfrom kfp import dsl\nfrom kfp.dsl import *\nfrom typing import\
-          \ *\n\ndef upload_data() -> int:\n    from src.components.data_upload import\
-          \ UploadData\n    from src.logger import logging\n\n    try:\n        upload\
-          \ = UploadData()\n        upload.download_file()\n        upload.extract_zip_file()\n\
-          \        inserted = upload.upload_to_s3()\n        logging.info(f\"{len(inserted)}\
-          \ documents inserted.\")\n        return len(inserted)\n    except Exception\
-          \ as e:\n        logging.error(f\"Upload Stage failed: {e}\")\n        raise\
-          \ e\n\n"
-        image: myacr123.azurecr.io/ml-pipeline:latest
+          \ *\n\ndef upload_data() -> int:\n\n    try:\n        data_ingestion = DataUploadPipeline()\n\
+          \        data_ingestion.main()\n        logging.info(f\"\u2705 Uploaded\
+          \ {len(data_ingestion)} files to S3.\")\n        return len(data_ingestion)\n\
+          \    except Exception as e:\n        logging.error(f\"\u274C Upload Stage\
+          \ failed: {e}\")\n        raise e\n\n"
+        image: kfp-local:latest
 pipelineInfo:
   description: Pipeline for data upload, ingestion, preprocessing, and training
   name: end-to-end-ml-pipeline

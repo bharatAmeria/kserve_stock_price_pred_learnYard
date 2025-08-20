@@ -1,33 +1,36 @@
+# Use a lightweight Python image
 FROM python:3.10-slim
 
-# Optional: Add labels
-LABEL maintainer="bharataameriya@gmail.com"
-LABEL description="Kubeflow component base image"
-
-# Set workdir
+# Set work directory inside container
 WORKDIR /app
 
-# Copy code
-COPY . /app
+# Install system dependencies if needed (add more if your src requires)
+RUN apt-get update && apt-get install -y --no-install-recommends \
+    build-essential \
+    git \
+    curl \
+    && rm -rf /var/lib/apt/lists/*
 
-RUN useradd -m -u 1000 user
+# Copy only required files into the image
+COPY src/ /app/src/
+COPY setup.py /app/
+COPY project.toml /app/
+COPY config.yaml /app/
+COPY .env /app/
+COPY requirements.txt /app/
+COPY .project-root /app/
 
-# Install Python dependencies
+# Install dependencies
 RUN pip install --upgrade pip \
     && pip install -r requirements.txt \
-    && rm -rf ~/.cache/pip
+    && pip install -e .
 
-RUN chown -R user:user /app
 
-# Set PYTHONPATH so modules can be found
+# Create runtime folders (so pipeline won’t error out if missing)
+RUN mkdir -p /app/artifacts /app/logs
+
+# Set environment variables (optional)
 ENV PYTHONPATH=/app
 
-# Optional: Force Python to print stdout/stderr without buffering
-ENV PYTHONUNBUFFERED=1
-
-# Optional: Switch to a non-root user (recommended for Kubeflow)
-
-USER user
-
-# Default command can be overridden by Kubeflow component
-ENTRYPOINT ["python"]
+# Default command (can be overridden in pipeline spec)
+CMD ["python", "-m", "src.main"]
