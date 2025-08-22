@@ -42,12 +42,18 @@ deploymentSpec:
 
           '
         - "\nimport kfp\nfrom kfp import dsl\nfrom kfp.dsl import *\nfrom typing import\
-          \ *\n\ndef ingest_data():\n    try:\n        logging.info(\"Ingestion Stage\
-          \ started.\")\n        data_processing= DataIngestionPipeline()\n      \
-          \  data_processing.main()\n        logging.info(\"Ingestion Stage completed.\"\
-          )\n    except Exception as e:\n        logging.error(f\"Ingestion Stage\
-          \ failed: {e}\")\n        raise e\n\n"
-        image: kfp-local:latest
+          \ *\n\ndef ingest_data():\n\n    import logging\n    from src.pipeline.stage02_data_ingestion\
+          \ import DataIngestionPipeline\n\n    try:\n        logging.info(\"Ingestion\
+          \ Stage started.\")\n        data_processing= DataIngestionPipeline()\n\
+          \        data_processing.main()\n        logging.info(\"Ingestion Stage\
+          \ completed.\")\n    except Exception as e:\n        logging.error(f\"Ingestion\
+          \ Stage failed: {e}\")\n        raise e\n\n"
+        image: bharat9838/kubeflow_pipeline:latest-v2
+        resources:
+          cpuLimit: 1.0
+          memoryLimit: 2.147483648
+          resourceCpuLimit: '1'
+          resourceMemoryLimit: 2Gi
     exec-preprocess-data:
       container:
         args:
@@ -74,12 +80,18 @@ deploymentSpec:
 
           '
         - "\nimport kfp\nfrom kfp import dsl\nfrom kfp.dsl import *\nfrom typing import\
-          \ *\n\ndef preprocess_data():\n\n    try:\n        logging.info(\"Preprocessing\
+          \ *\n\ndef preprocess_data():\n\n    import logging\n    from src.pipeline.stage03_data_processing\
+          \ import DataProcessingPipeline\n\n    try:\n        logging.info(\"Preprocessing\
           \ Stage started.\")\n        data_processing= DataProcessingPipeline()\n\
           \        data_processing.main()\n        logging.info(\"Preprocessing Stage\
           \ completed.\")\n    except Exception as e:\n        logging.error(f\"Preprocessing\
           \ Stage failed: {e}\")\n        raise e\n\n"
-        image: kfp-local:latest
+        image: bharat9838/kubeflow_pipeline:latest-v2
+        resources:
+          cpuLimit: 2.0
+          memoryLimit: 4.294967296
+          resourceCpuLimit: '2'
+          resourceMemoryLimit: 4Gi
     exec-train-model:
       container:
         args:
@@ -107,13 +119,18 @@ deploymentSpec:
           '
         - "\nimport kfp\nfrom kfp import dsl\nfrom kfp.dsl import *\nfrom typing import\
           \ *\n\ndef train_model():\n    import pandas as pd\n    from src.config\
-          \ import CONFIG\n    from src.components.model import ModelTraining\n  \
-          \  from src.logger import logging\n\n    try:\n        logging.info(\"Model\
-          \ Training Stage started.\")\n        selection = ModelPipeline()\n    \
-          \    selection.main()\n        logging.info(\"Model Training Stage completed.\"\
+          \ import CONFIG\n    from src.pipeline.stage04_model_training import ModelPipeline\n\
+          \    from src.logger import logging\n\n    try:\n        logging.info(\"\
+          Model Training Stage started.\")\n        selection = ModelPipeline()\n\
+          \        selection.main()\n        logging.info(\"Model Training Stage completed.\"\
           )\n    except Exception as e:\n        logging.error(f\"Model Training failed:\
           \ {e}\")\n        raise e\n\n"
-        image: kfp-local:latest
+        image: bharat9838/kubeflow_pipeline:latest-v2
+        resources:
+          cpuLimit: 4.0
+          memoryLimit: 8.589934592
+          resourceCpuLimit: '4'
+          resourceMemoryLimit: 8Gi
     exec-upload-data:
       container:
         args:
@@ -140,12 +157,20 @@ deploymentSpec:
 
           '
         - "\nimport kfp\nfrom kfp import dsl\nfrom kfp.dsl import *\nfrom typing import\
-          \ *\n\ndef upload_data() -> int:\n\n    try:\n        data_ingestion = DataUploadPipeline()\n\
-          \        data_ingestion.main()\n        logging.info(f\"\u2705 Uploaded\
-          \ {len(data_ingestion)} files to S3.\")\n        return len(data_ingestion)\n\
-          \    except Exception as e:\n        logging.error(f\"\u274C Upload Stage\
-          \ failed: {e}\")\n        raise e\n\n"
-        image: kfp-local:latest
+          \ *\n\ndef upload_data() -> int:\n\n    import logging\n    from src.logger\
+          \ import logging as custom_logging  # If you have custom logger\n    from\
+          \ src.pipeline.stage01_data_upload import DataUploadPipeline\n\n    try:\n\
+          \        data_ingestion = DataUploadPipeline()\n        data_ingestion.main()\n\
+          \        logging.info(f\"\u2705 Uploaded {len(data_ingestion)} files to\
+          \ S3.\")\n        return len(data_ingestion)\n    except Exception as e:\n\
+          \        logging.error(f\"\u274C Upload Stage failed: {e}\")\n        raise\
+          \ e\n\n"
+        image: bharat9838/kubeflow_pipeline:latest-v2
+        resources:
+          cpuLimit: 1.0
+          memoryLimit: 2.147483648
+          resourceCpuLimit: '1'
+          resourceMemoryLimit: 2Gi
 pipelineInfo:
   description: Pipeline for data upload, ingestion, preprocessing, and training
   name: end-to-end-ml-pipeline

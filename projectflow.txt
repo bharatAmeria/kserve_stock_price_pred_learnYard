@@ -1,10 +1,10 @@
 1. Create repo, clone it in local
 
-2. Create a virtual environment -> python3 -m venv venv
+2. Create a virtual environment -> python3 -m venv .venv
 
 3. Activate the virtual environment -> source venv/bin/Activate
 
-4. Create template.py file and copy code and run it ( it create a project structure for you )
+4. Create template.py file and copy code and run it ( it create a project structure ready for you )
 
 5. Add code to setup.py, project.toml, testEnvironment.py, requirements.txt, src/constants/__init__.py.
     Now run testEnvironment.py (verifies the pyhton environment and install dependecies from requirements.txt)
@@ -19,80 +19,199 @@
     DATASET_URI=https://drive.google.com/file/d/17nz2lVYeLqbCWDuZb2h2gpROe5BJOe2K/view?usp=sharing
 
 8. Now SignIn in your aws google console create an IAM user and give administrator access.
-   Download AWS_ACCESS_KEY_ID, AWS_SECRET_ACCESS_KEY, AWS_DEFAULT_REGION,AWS_S3_BUCKET_NAME.
-   Add these credentials to .env file.
+    Download AWS_ACCESS_KEY_ID, AWS_SECRET_ACCESS_KEY, AWS_DEFAULT_REGION.
+
+    Add these credentials to .env file.
+
 
 9. Now do { aws configure }. It takes AWS_ACCESS_KEY_ID, AWS_SECRET_ACCESS_KEY, AWS_DEFAULT_REGION as input.
 
 10. Now create s3 bucket.  
-    aws s3 mb s3://learnyard-data-ingestion-20250726 --region us-east-1
+    aws s3 mb s3://learnyard-data-ingestion --region eu-north-1
 
-11. Now run train.py file to check each component is working properly.
+    Add bucket name in the .env file AWS_S3_BUCKET_NAME
 
-12. Now create a directory under name app wher we define our fastAPI app. Cpoy code files in the directory.
+11. Now run src/main.py file to check each component is working properly.
 
-13. Now create dev folder and copy yaml files.
+12. Now create a directory under name app where we define our fastAPI app. Copy code files in the directory.
 
-14. Create folder name kubeflow where our kubeflow pipeline are defined.
+13. Create folder name kubeflow where our kubeflow pipeline files are defined.
+    Copy and Add file into the folder 
 
-15. Build our docker image of our src folder and push to ECR.
-    (Do step 17 First)
+14. Build our docker image of our src folder and push to ECR.
+    (Do step 16 First to save time. Because configure cluster takes around 20 min. )
 
     (Why ?
-      Because our kubeflow pipeline need docerk image to communicate with in order to run pipeline.
+      Because our kubeflow pipeline need docker image to communicate with in order to run pipeline.
       Or 
       we can define each component in the file of kubeflow_pipeline.py which is not best practice.
     )
 
-    aws ecr create-repository --repository-name ml_pipeline
+    aws ecr create-repository --repository-name kubeflow_pipeline
 
-    aws ecr get-login-password --region eu-north-1 | docker login --username AWS --password-stdin 123456789012.dkr.ecr.eu-north-1.amazonaws.com
-    docker build --platform linux/amd64 -t ml_pipeline .
+    Now search for ECR in your aws console. In the top right corner you will see push commands just like below but specific to your account.
+-------------------------------------------------------------------------------------------
+    { aws ecr get-login-password --region eu-north-1 | docker login --username AWS --password-stdin 123456789012.dkr.ecr.eu-north-1.amazonaws.com
+    docker buildx build --platform linux/amd64 -t kubeflow_pipeline .
     docker tag ml_pipeline:latest 123456789012.dkr.ecr.eu-north-1.amazonaws.com/ml_pipeline:latest
-    docker push 123456789012.dkr.ecr.eu-north-1.amazonaws.com/ml_pipeline:latest
+    docker push 123456789012.dkr.ecr.eu-north-1.amazonaws.com/ml_pipeline:latest 
+    }
 
     (Replace 123456789012 with your actual AWS account ID.)
     
 
-16. Now copy the ECR image uri and paste it in the kubeflow/kube_flow_pipeline.py file and run kubeflow/ml_pipe.py.
+15. Now copy the ECR image uri and paste it in the kubeflow/kube_flow_pipeline.py file under name BASE_IMAGE.
     It create a yaml file dev folder.
 
-17. Now create a cluster to configure kserve and kubeflow
+16. Now create a cluster to configure kserve and kubeflow
     create eks cluster for kubeflow 
     prerequsite (install eksctl, In this case it is preinstalled) 
 
     eksctl create cluster \
       --name kubeflow-cluster \
       --version 1.27 \
-      --region us-east-1 \
+      --region eu-north-1 \
       --nodegroup-name standard-workers \
       --node-type t3.large \
       --nodes 3 \
       --managed
 
-      (take a break it will take around 15 mins or do step 15 and fastAPI step 2)
+      (take a break it will take around 15 mins till then do step 14)
 
-      
+-------------------------------------------------------------
+Once the cluster is ready. Now we need to setup kubeflow.
 
-12. Now we need to install Kubeflow
+a. Go to "https://www.kubeflow.org/docs/components/pipelines/legacy-v1/installation/localcluster-deployment/"
+b. From bash terminal run below command:
+---
+first run this -> export PIPELINE_VERSION=2.4.0
+Then run below 3 at once ->
+kubectl apply -k "github.com/kubeflow/pipelines/manifests/kustomize/cluster-scoped-resources?ref=$PIPELINE_VERSION"
+kubectl wait --for condition=established --timeout=60s crd/applications.app.k8s.io
+kubectl apply -k "github.com/kubeflow/pipelines/manifests/kustomize/env/platform-agnostic?ref=$PIPELINE_VERSION"
+---
+
+c. Check services status -> kubectl get all -n kubeflow (depending on your system, it'll take finally around 15-20min to get them all working)
+or you can also run -> kubectl get pod -A
+
+---
+Move ahead if you see all services running ->
+
+(kbf) PS C:\Users\Personal\Documents\kubeflow-practice-proj> kubectl get all -n kubeflow
+NAME                                                  READY   STATUS    RESTARTS      AGE
+pod/cache-deployer-deployment-86d88fd8-c5dd8          1/1     Running   0             29m
+pod/cache-server-699d6d4b58-c9zqx                     1/1     Running   0             29m
+pod/metadata-envoy-deployment-946867bf-tgz59          1/1     Running   0             29m
+pod/metadata-grpc-deployment-6c44975f56-pnrbt         1/1     Running   8 (15m ago)   29m
+pod/metadata-writer-844c8c496d-nx56x                  1/1     Running   0             29m
+pod/minio-5d5574b5cd-f4kxc                            1/1     Running   0             29m
+pod/ml-pipeline-7b8c745b88-x524c                      1/1     Running   5 (14m ago)   29m
+pod/ml-pipeline-persistenceagent-9cdb8686b-7z6jx      1/1     Running   3 (15m ago)   29m
+pod/ml-pipeline-scheduledworkflow-bcfc5899-5tnwg      1/1     Running   0             29m
+pod/ml-pipeline-ui-585dfd5955-nnrmt                   1/1     Running   0             29m
+pod/ml-pipeline-viewer-crd-cbb68b94-pxkm8             1/1     Running   0             29m
+pod/ml-pipeline-visualizationserver-55c694986-psvhg   1/1     Running   0             29m
+pod/mysql-85fd58798-vw9l5                             1/1     Running   0             29m
+pod/workflow-controller-7bc7b46bfd-nchx9              1/1     Running   0             29m
+---
+
+9. Access the UI (run on a separate terminal) -> kubectl port-forward -n kubeflow svc/ml-pipeline-ui 8080:80
+
+10. Now, open a new terminal, activate the venv and run -> python kubeflow_pipeline.py (this will create a yaml file that we'll use to deploy on kf cluster)
+
+11. Now run -> kfp pipeline create -p IrisProject kubeflow_pipeline.yaml
+
+12. Now go back to UI and check the pipeline, you can now choose to create a run.
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 12.1 # Clone the full Kubeflow manifests
 
       export PIPELINE_VERSION=2.4.0
       kubectl apply -k "github.com/kubeflow/pipelines/manifests/kustomize/cluster-scoped-resources?ref=$PIPELINE_VERSION"
       kubectl wait --for condition=established --timeout=60s crd/applications.app.k8s.io
-      kubectl apply -k "github.com/kubeflow/pipelines/manifests/kustomize/env/dev?ref=$PIPELINE_VERSION"
-
-    If you encounter persistent pod crashes
-
+      kubectl apply -k "github.com/kubeflow/pipelines/manifests/kustomize/env/dev?ref=$PIPELINE_VERSION"  
       kubectl apply -k "github.com/kubeflow/pipelines/manifests/kustomize/env/platform-agnostic?ref=$PIPELINE_VERSION"
+      kubectl apply -f https://github.com/cert-manager/cert-manager/releases/download/v1.14.5/cert-manager.yaml
+
+      kubectl get pods -n cert-manager
+      kubectl delete pod -n kubeflow -l app=cache-deployer
+
+      kubectl create secret generic mysql-secret \
+      --from-literal=username=root \
+      --from-literal=password=YOUR_PASSWORD \
+      -n kubeflow \
+      --dry-run=client -o yaml | kubectl apply -f -
+
+      kubectl rollout restart deployment -n kubeflow
+      
+
+
+      
 
       kubectl get pods -n kubeflow
-
       kubectl port-forward -n kubeflow svc/ml-pipeline-ui 8080:80
 
-      minikube image load kfp-local:latest
+      kubectl patch svc ml-pipeline -n kubeflow -p '{"spec": {"type": "LoadBalancer"}}'
+      kubectl get svc -n kubeflow | grep ml-pipeline
+      kubectl get svc -n kubeflow ml-pipeline 
 
+      Now paste the url in your browser -> http://aecc7c6577e754c58a1fdd0d69156eec-867836253.eu-north-1.elb.amazonaws.com/#/pipelines
+
+
+Once you successfully fetch ui. Copy the URL and paste it in the kubeflow/ml_pipe.py file.
 
 13. Install kserve:
 
@@ -130,12 +249,14 @@
       kubectl get pods -n knative-serving
       kubectl get svc -n istio-system
 
-      kubectl apply -f inference-service.yaml
+      kubectl apply -f InferenceService.yaml
 
       kubectl get svc istio-ingressgateway -n istio-system
 
 Look for the EXTERNAL-IP. Example: a1b2c3d4e5.us-east-1.elb.amazonaws.com
       http://a1b2c3d4.elb.amazonaws.com
+
+
 ----------- Fast API ---------------
 
 1. Dockerize FastAPI App
@@ -148,7 +269,22 @@ Look for the EXTERNAL-IP. Example: a1b2c3d4e5.us-east-1.elb.amazonaws.com
     docker buildx build --platform linux/amd64 -t 12345678910.dkr.ecr.us-east-1.amazonaws.com/lambda:latest .
     docker push 12345678910.dkr.ecr.us-east-1.amazonaws.com/lambda:latest
 
-5. 
+5. kubectl create secret generic s3-secret \
+    --from-literal=aws_access_key_id=<your-access-key> \
+    --from-literal=aws_secret_access_key=<your-secret-key>
+
+
+    kubectl apply -f inferenceservice.yaml
+
+
+    curl -X POST http://<kserve-url>/v1/models:predict \
+    -H "Content-Type: application/json" \
+    -d '{"inputs": [[10, 20, 30, 40]]}'
+  
+
+    kubectl get inferenceservice fastapi-serve
+    kubectl describe inferenceservice fastapi-serve
+
 
 6. Verify:
     kubectl get deployment -n kserve
@@ -158,27 +294,11 @@ Look for the EXTERNAL-IP. Example: a1b2c3d4e5.us-east-1.elb.amazonaws.com
    kubectl apply -f InferenceService.yaml
    kubectl get inferenceservices
 
-
-
-
-
-
-
-3. Install KServe if not already:
-    kubectl apply -f https://github.com/kserve/kserve/releases/download/v0.11.2/kserve.yaml
-
-4. kubectl apply -f InferenceService.yaml
-
-5. kubectl get inferenceservices
-   kubectl get pods
-
-6. Access the FastAPI Endpoint
+8. Access the FastAPI Endpoint
    kubectl port-forward svc/istio-ingressgateway -n istio-system 8080:80
 
-7. Hit the url
-
+9. Hit the url
 http://localhost/v1/models/fastapi-serve:predict
-
 
 
 ---------------- delete resources used ------------------
@@ -186,27 +306,27 @@ http://localhost/v1/models/fastapi-serve:predict
 eksctl delete cluster --name kubeflow-cluster --region us-east-1
 
 # Delete all Load Balancers created by EKS
-aws elb describe-load-balancers --region us-east-1 | jq -r '.LoadBalancerDescriptions[].LoadBalancerName' | while read lb; do
+aws elb describe-load-balancers --region eu-north-1 | jq -r '.LoadBalancerDescriptions[].LoadBalancerName' | while read lb; do
   echo "Deleting ELB: $lb"
   aws elb delete-load-balancer --load-balancer-name $lb --region us-east-1
 done
 
-aws elbv2 describe-load-balancers --region us-east-1 | jq -r '.LoadBalancers[].LoadBalancerArn' | while read lb; do
+aws elbv2 describe-load-balancers --region eu-north-1 | jq -r '.LoadBalancers[].LoadBalancerArn' | while read lb; do
   echo "Deleting ELBv2: $lb"
   aws elbv2 delete-load-balancer --load-balancer-arn $lb --region us-east-1
 done
 
-aws ec2 describe-volumes --region us-east-1 --query "Volumes[*].[VolumeId,State]" --output text | grep available | awk '{print $1}' | while read vol; do
+aws ec2 describe-volumes --region eu-north-1 --query "Volumes[*].[VolumeId,State]" --output text | grep available | awk '{print $1}' | while read vol; do
   echo "Deleting EBS Volume: $vol"
   aws ec2 delete-volume --volume-id $vol --region us-east-1
 done
 
-aws ec2 describe-security-groups --region us-east-1 --query 'SecurityGroups[*].GroupId' --output text | tr '\t' '\n' | while read sg; do
+aws ec2 describe-security-groups --region eu-north-1 --query 'SecurityGroups[*].GroupId' --output text | tr '\t' '\n' | while read sg; do
   echo "Trying to delete SG: $sg"
   aws ec2 delete-security-group --group-id $sg --region us-east-1 2>/dev/null
 done
 
-aws ec2 describe-vpcs --region us-east-1 --query 'Vpcs[*].VpcId' --output text
+aws ec2 describe-vpcs --region eu-north-1 --query 'Vpcs[*].VpcId' --output text
 # Then delete:
 aws ec2 delete-vpc --vpc-id <vpc-id> --region us-east-1
 

@@ -65,7 +65,7 @@ class UploadData:
 
             aws_access_key = os.getenv("AWS_ACCESS_KEY_ID")
             aws_secret_key = os.getenv("AWS_SECRET_ACCESS_KEY")
-            aws_region = os.getenv("AWS_DEFAULT_REGION", "us-east-1")
+            aws_region = os.getenv("AWS_DEFAULT_REGION")
 
             if not aws_access_key or not aws_secret_key or not bucket_name:
                 raise ValueError("AWS credentials or bucket name not found in environment variables")

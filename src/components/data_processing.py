@@ -36,7 +36,7 @@ class DataPreprocess:
             df['day'] = df['Date'].dt.day
 
             df.drop('Date',axis=1,inplace=True)
-            save_path = CONFIG["processed_data_path"]
+            save_path = self.config["processed_data_path"]
             os.makedirs(os.path.dirname(save_path), exist_ok=True)
             df.to_csv(save_path, index=False)
             logging.info(f"Successfully saved processed data to {save_path}")

@@ -19,6 +19,7 @@ COPY config.yaml /app/
 COPY .env /app/
 COPY requirements.txt /app/
 COPY .project-root /app/
+COPY kubeflow/* /app/kubeflow/
 
 # Install dependencies
 RUN pip install --upgrade pip \
