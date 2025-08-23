@@ -181,17 +181,20 @@ kubectl port-forward svc/fastapi-serve-predictor-00001-private 8080:80
 eksctl delete cluster --name kubeflow-cluster --region eu-north-1
 
 aws ecr delete-repository \
-  --repository-name <REPO_NAME> \
+  --repository-name kubeflow_pipeline \
   --force
 
+aws ecr delete-repository \
+  --repository-name fastapi-inference \
+  --force
 
 # Delete all objects in the bucket
-aws s3 rm s3://<BUCKET_NAME> --recursive
+aws s3 rm s3://learnyard-data-ingestion --recursive
 
 # Delete the bucket
 aws s3api delete-bucket \
-  --bucket <BUCKET_NAME> \
-  --region <REGION>
+  --bucket learnyard-data-ingestion \
+  --region us-east-1
 
 
 
