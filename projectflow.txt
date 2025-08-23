@@ -33,7 +33,7 @@
 
 11. Now run src/main.py file to check each component is working properly.
     (Delete the file store in the s3 directory. So that your s3 bucket charge is less.)
-    ( In the file .gitignore add files below 
+    ( In the file .gitignore add files below before committing after succesfull pipeline run
       artifacts/*
       istio-1.19.0
       .venv
@@ -69,7 +69,7 @@
              Or 
              We can define each component in the file of kubeflow_pipeline.py which is not best practice.
     )
-    (Copy .dockerignore file and paste in your repo.)
+    (Copy .dockerignore file and paste in your repo. and don't forgot launch docker desktop in the background.)
     a. Create an ECR repo where we push our image -> aws ecr create-repository --repository-name kubeflow_pipeline
     b. Now go on AWS console and seacrh for ECR.
     c. Check ECR repo is created or not.
