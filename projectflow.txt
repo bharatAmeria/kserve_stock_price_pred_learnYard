@@ -33,7 +33,7 @@
 
 11. Now run src/main.py file to check each component is working properly.
     (Delete the file store in the s3 directory. So that your s3 bucket charge is less.)
-    ( In the file .gitignore add files below before committing after succesfull pipeline run
+    ( In the file .gitignore add files below before committing after succesfull pipeline run.
       artifacts/*
       istio-1.19.0
       .venv
@@ -176,13 +176,22 @@ kubectl port-forward svc/fastapi-serve-predictor-00001-private 8080:80
    -d '{"instances": [[1.0, 2.0, 3.0, 4.0, 5.0, 6.0, 7.0, 8.0]]}'
 
 
+---------------------------------------------------------------
+
+eksctl delete cluster --name kubeflow-cluster --region eu-north-1
+
+aws ecr delete-repository \
+  --repository-name <REPO_NAME> \
+  --force
 
 
+# Delete all objects in the bucket
+aws s3 rm s3://<BUCKET_NAME> --recursive
 
-
-
-
-
+# Delete the bucket
+aws s3api delete-bucket \
+  --bucket <BUCKET_NAME> \
+  --region <REGION>
 
 
 
