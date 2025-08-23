@@ -208,4 +208,5 @@ __marimo__/
 
 artifacts/
 manifests/
-istio-1.20.3
+
+istio-1.19.4/
